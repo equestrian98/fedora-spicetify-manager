@@ -137,15 +137,15 @@ export PATH="$HOME/.spicetify:$PATH"
 Install Fedora Spicetify Manager with:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/DEIN-USERNAME/fedora-spicetify-manager/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/equestrian98/fedora-spicetify-manager/main/install.sh | bash
 ```
 
-Replace `DEIN-USERNAME` with your GitHub username.
+Replace `equestrian98` with your GitHub username.
 
 Example:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/phillipl-bauer/fedora-spicetify-manager/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/equestrian98/fedora-spicetify-manager/main/install.sh | bash
 ```
 
 After installation, open a new terminal or run:
@@ -173,7 +173,7 @@ spice
 Clone the repository:
 
 ```bash
-git clone https://github.com/DEIN-USERNAME/fedora-spicetify-manager.git
+git clone https://github.com/equestrian98/fedora-spicetify-manager.git
 cd fedora-spicetify-manager
 ```
 

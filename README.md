@@ -20,6 +20,8 @@ The tool provides an interactive terminal menu, direct commands, automatic path 
 ╭────────────────────────────────────────────────────╮
 │              Fedora Spicetify Manager              │
 │              Spotify Flatpak + Spicetify           │
+│                                                    │
+│             Projekt GitHub @equestrian98           │
 ╰────────────────────────────────────────────────────╯
 
 Menü

@@ -1,0 +1,455 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:$HOME/.spicetify:$PATH"
+
+SPOTIFY_PATH="/var/lib/flatpak/app/com.spotify.Client/x86_64/stable/active/files/extra/share/spotify"
+PREFS_PATH="$HOME/.var/app/com.spotify.Client/config/spotify/prefs"
+LOG_FILE="/tmp/spice-command.log"
+
+RED="$(tput setaf 1 2>/dev/null)"
+GREEN="$(tput setaf 2 2>/dev/null)"
+YELLOW="$(tput setaf 3 2>/dev/null)"
+BLUE="$(tput setaf 4 2>/dev/null)"
+MAGENTA="$(tput setaf 5 2>/dev/null)"
+CYAN="$(tput setaf 6 2>/dev/null)"
+BOLD="$(tput bold 2>/dev/null)"
+DIM="$(tput dim 2>/dev/null)"
+RESET="$(tput sgr0 2>/dev/null)"
+REV="$(tput rev 2>/dev/null)"
+
+items=(
+  "Spicetify reparieren"
+  "Spotify starten"
+  "Spotify beenden"
+  "Spotify neu starten"
+  "Spotify + Spicetify updaten"
+  "Spicetify apply"
+  "Backup / Apply intelligent"
+  "Status anzeigen"
+  "Autostart-Fix testen"
+  "Hilfe"
+  "Beenden"
+)
+
+commands=(
+  "fix"
+  "start"
+  "stop"
+  "restart"
+  "update"
+  "apply"
+  "backup"
+  "status"
+  "autostart"
+  "help"
+  "exit"
+)
+
+clear_screen() {
+    printf "\033c"
+}
+
+badge() {
+    local type="$1"
+    local text="$2"
+
+    case "$type" in
+        ok) echo "${GREEN}[ OK ]${RESET} $text" ;;
+        info) echo "${CYAN}[ INFO ]${RESET} $text" ;;
+        warn) echo "${YELLOW}[ WARN ]${RESET} $text" ;;
+        err) echo "${RED}[ FEHLER ]${RESET} $text" ;;
+        *) echo "[ .. ] $text" ;;
+    esac
+}
+
+header() {
+    clear_screen
+    echo "${MAGENTA}${BOLD}"
+    echo "╭────────────────────────────────────────────────────╮"
+    echo "│              Fedora Spicetify Manager              │"
+    echo "│             Spotify Flatpak + Spicetify            │"
+    echo "│                                                    │"
+    echo "│             Projekt GitHub @equestrian98           │"
+    echo "╰────────────────────────────────────────────────────╯"
+    echo "${RESET}"
+}
+
+pause_menu() {
+    echo
+    read -rp "Enter drücken zum Fortfahren..."
+}
+
+progress() {
+    local text="$1"
+    local duration="${2:-1}"
+    local width=36
+
+    for ((i=0; i<=width; i++)); do
+        percent=$(( i * 100 / width ))
+        filled=$(printf "%${i}s" | tr ' ' '#')
+        empty=$(printf "%$((width-i))s" | tr ' ' '.')
+        printf "\r${CYAN}%s${RESET} [%s%s] ${YELLOW}%3d%%%s" "$text" "$filled" "$empty" "$percent" "$RESET"
+        sleep "$(awk "BEGIN {print $duration/$width}")"
+    done
+    echo
+}
+
+spinner() {
+    local pid="$1"
+    local text="$2"
+    local spin='-\|/'
+    local i=0
+
+    while kill -0 "$pid" 2>/dev/null; do
+        i=$(( (i + 1) % 4 ))
+        printf "\r${CYAN}%s${RESET} ${YELLOW}%s${RESET}" "$text" "${spin:$i:1}"
+        sleep 0.12
+    done
+
+    wait "$pid"
+    local status="$?"
+
+    if [ "$status" -eq 0 ]; then
+        printf "\r${CYAN}%s${RESET} ${GREEN}OK${RESET}\n" "$text"
+    else
+        printf "\r${CYAN}%s${RESET} ${RED}FEHLER${RESET}\n" "$text"
+    fi
+
+    return "$status"
+}
+
+run_cmd() {
+    local text="$1"
+    shift
+
+    "$@" >"$LOG_FILE" 2>&1 &
+    local pid="$!"
+
+    spinner "$pid" "$text"
+    local status="$?"
+
+    if [ "$status" -ne 0 ]; then
+        echo
+        badge err "$text ist fehlgeschlagen"
+        echo "${YELLOW}──── Log ─────────────────────────────────────────${RESET}"
+        cat "$LOG_FILE"
+        echo "${YELLOW}──────────────────────────────────────────────────${RESET}"
+        exit "$status"
+    fi
+}
+
+flatpak_update_visible() {
+    badge info "Flatpak Update startet sichtbar, damit nichts wie eingefroren wirkt."
+    echo
+    flatpak update -y com.spotify.Client
+}
+
+configure_spicetify() {
+    spicetify config prefs_path "$PREFS_PATH" >/dev/null 2>&1
+    spicetify config spotify_path "$SPOTIFY_PATH" >/dev/null 2>&1
+    spicetify config inject_css 1 >/dev/null 2>&1
+    spicetify config replace_colors 1 >/dev/null 2>&1
+    spicetify config custom_apps marketplace >/dev/null 2>&1
+    spicetify config current_theme marketplace >/dev/null 2>&1
+}
+
+check_basic() {
+    if ! command -v flatpak >/dev/null 2>&1; then
+        badge err "Flatpak wurde nicht gefunden."
+        exit 1
+    fi
+
+    if ! flatpak info com.spotify.Client >/dev/null 2>&1; then
+        badge err "Spotify Flatpak ist nicht installiert."
+        echo
+        echo "Installieren mit:"
+        echo "  flatpak install flathub com.spotify.Client"
+        exit 1
+    fi
+
+    if [ ! -f "$PREFS_PATH" ]; then
+        badge warn "Spotify prefs-Datei wurde nicht gefunden."
+        echo
+        echo "Starte Spotify einmal:"
+        echo "  flatpak run com.spotify.Client"
+        echo
+        echo "Danach Spotify schließen und erneut ausführen:"
+        echo "  spice fix"
+        exit 1
+    fi
+
+    if ! command -v spicetify >/dev/null 2>&1; then
+        if [ -x "$HOME/.spicetify/spicetify" ]; then
+            export PATH="$HOME/.spicetify:$PATH"
+        else
+            badge err "Spicetify wurde nicht gefunden."
+            echo
+            echo "Installieren mit:"
+            echo "  curl -fsSL https://raw.githubusercontent.com/spicetify/cli/main/install.sh | sh"
+            exit 1
+        fi
+    fi
+}
+
+do_fix() {
+    header
+    check_basic
+
+    badge info "Setze Spicetify-Konfiguration"
+    progress "Vorbereitung" 1
+    configure_spicetify
+
+    run_cmd "Flatpak-Rechte setzen" sudo chmod -R a+rwX "$SPOTIFY_PATH"
+    run_cmd "Spicetify anwenden" spicetify apply
+
+    progress "Abschluss" 1
+    badge ok "Spicetify wurde angewendet."
+}
+
+do_autostart_fix() {
+    export PATH="$HOME/.local/bin:$HOME/.spicetify:$PATH"
+
+    if [ ! -f "$PREFS_PATH" ]; then
+        exit 0
+    fi
+
+    configure_spicetify
+    spicetify apply >/tmp/spice-autostart.log 2>&1 || true
+}
+
+do_start() {
+    header
+    badge info "Starte Spotify Flatpak"
+    progress "Start" 1
+    flatpak run com.spotify.Client
+}
+
+do_stop() {
+    header
+    badge info "Spotify wird beendet"
+    pkill -f "com.spotify.Client|spotify" 2>/dev/null || true
+    progress "Beenden" 1
+    badge ok "Spotify wurde beendet."
+}
+
+do_restart() {
+    header
+    badge info "Spotify wird beendet"
+    pkill -f "com.spotify.Client|spotify" 2>/dev/null || true
+    progress "Neustart vorbereiten" 1
+    badge info "Starte Spotify Flatpak"
+    flatpak run com.spotify.Client
+}
+
+do_update() {
+    header
+    check_basic
+
+    flatpak_update_visible
+
+    echo
+    badge info "Prüfe Spicetify CLI"
+
+    if [ ! -x "$HOME/.spicetify/spicetify" ] && ! command -v spicetify >/dev/null 2>&1; then
+        badge warn "Spicetify nicht gefunden. Installiere ohne Marketplace-Abfrage."
+        echo "n" | curl -fsSL https://raw.githubusercontent.com/spicetify/cli/main/install.sh | sh
+    else
+        badge ok "Spicetify ist vorhanden. Kein Reinstall nötig."
+    fi
+
+    echo
+    badge info "Wende Fix nach Update an"
+    configure_spicetify
+    run_cmd "Flatpak-Rechte setzen" sudo chmod -R a+rwX "$SPOTIFY_PATH"
+    run_cmd "Spicetify anwenden" spicetify apply
+
+    progress "Update abgeschlossen" 1
+    badge ok "Spotify/Spicetify Update fertig."
+}
+
+do_apply() {
+    header
+    check_basic
+    configure_spicetify
+    run_cmd "Spicetify apply" spicetify apply
+    progress "Fertig" 1
+}
+
+do_backup() {
+    header
+    check_basic
+    configure_spicetify
+
+    badge info "Starte intelligentes Backup / Apply"
+    echo
+
+    if spicetify backup apply >"$LOG_FILE" 2>&1; then
+        badge ok "Backup + Apply erfolgreich."
+    else
+        if grep -qi "A backup is available" "$LOG_FILE"; then
+            badge warn "Backup existiert bereits. Nutze nur apply."
+            run_cmd "Spicetify apply" spicetify apply
+        else
+            badge err "Backup + Apply fehlgeschlagen"
+            echo "${YELLOW}──── Log ─────────────────────────────────────────${RESET}"
+            cat "$LOG_FILE"
+            echo "${YELLOW}──────────────────────────────────────────────────${RESET}"
+            exit 1
+        fi
+    fi
+
+    progress "Fertig" 1
+}
+
+do_status() {
+    header
+
+    echo "${BOLD}${CYAN}Systemstatus${RESET}"
+    echo
+
+    if flatpak info com.spotify.Client >/dev/null 2>&1; then
+        badge ok "Spotify Flatpak installiert"
+    else
+        badge err "Spotify Flatpak nicht installiert"
+    fi
+
+    if command -v spicetify >/dev/null 2>&1 || [ -x "$HOME/.spicetify/spicetify" ]; then
+        badge ok "Spicetify vorhanden"
+    else
+        badge err "Spicetify nicht gefunden"
+    fi
+
+    if [ -f "$PREFS_PATH" ]; then
+        badge ok "Spotify prefs gefunden"
+    else
+        badge warn "Spotify prefs nicht gefunden"
+    fi
+
+    if [ -d "$SPOTIFY_PATH" ]; then
+        badge ok "Spotify App-Pfad gefunden"
+    else
+        badge err "Spotify App-Pfad nicht gefunden"
+    fi
+
+    echo
+    echo "${BOLD}${CYAN}Versionen${RESET}"
+    echo
+
+    echo "Spotify Flatpak:"
+    flatpak info com.spotify.Client 2>/dev/null | head -n 8 || true
+
+    echo
+    echo "Spicetify:"
+    spicetify -v 2>/dev/null || "$HOME/.spicetify/spicetify" -v 2>/dev/null || true
+
+    echo
+    echo "${BOLD}${CYAN}Pfade${RESET}"
+    echo "Prefs:   $PREFS_PATH"
+    echo "Spotify: $SPOTIFY_PATH"
+}
+
+help_menu() {
+    header
+    echo "${BOLD}${CYAN}Befehle${RESET}"
+    echo
+    echo "  spice              Menü öffnen"
+    echo "  spice fix          Spicetify reparieren"
+    echo "  spice start        Spotify starten"
+    echo "  spice stop         Spotify beenden"
+    echo "  spice restart      Spotify neu starten"
+    echo "  spice update       Spotify + Spicetify updaten"
+    echo "  spice apply        Spicetify apply"
+    echo "  spice backup       Backup / Apply intelligent"
+    echo "  spice status       Status anzeigen"
+    echo "  spice autostart    Fix ohne sudo für GNOME Autostart"
+    echo "  spice help         Hilfe anzeigen"
+    echo
+}
+
+draw_menu() {
+    local selected="$1"
+
+    header
+    echo "${BOLD}${CYAN}Menü${RESET}"
+    echo "${DIM}Mit ↑/↓ auswählen, Enter bestätigen, q beendet.${RESET}"
+    echo
+
+    for i in "${!items[@]}"; do
+        if [ "$i" -eq "$selected" ]; then
+            echo "${REV}  > ${items[$i]}  ${RESET}"
+        else
+            echo "    ${items[$i]}"
+        fi
+    done
+
+    echo
+}
+
+main_menu() {
+    local selected=0
+    local key
+
+    while true; do
+        draw_menu "$selected"
+
+        IFS= read -rsn1 key
+
+        if [[ "$key" == $'\x1b' ]]; then
+            read -rsn2 -t 0.1 key
+            case "$key" in
+                "[A")
+                    selected=$((selected - 1))
+                    if [ "$selected" -lt 0 ]; then
+                        selected=$((${#items[@]} - 1))
+                    fi
+                    ;;
+                "[B")
+                    selected=$((selected + 1))
+                    if [ "$selected" -ge "${#items[@]}" ]; then
+                        selected=0
+                    fi
+                    ;;
+            esac
+        elif [[ "$key" == "" ]]; then
+            cmd="${commands[$selected]}"
+
+            case "$cmd" in
+                fix) do_fix; pause_menu ;;
+                start) do_start ;;
+                stop) do_stop; pause_menu ;;
+                restart) do_restart ;;
+                update) do_update; pause_menu ;;
+                apply) do_apply; pause_menu ;;
+                backup) do_backup; pause_menu ;;
+                status) do_status; pause_menu ;;
+                autostart) do_autostart_fix; header; badge ok "Autostart-Fix ausgeführt."; pause_menu ;;
+                help) help_menu; pause_menu ;;
+                exit) clear_screen; exit 0 ;;
+            esac
+        elif [[ "$key" == "q" || "$key" == "Q" ]]; then
+            clear_screen
+            exit 0
+        fi
+    done
+}
+
+case "$1" in
+    fix) do_fix ;;
+    start) do_start ;;
+    stop) do_stop ;;
+    restart) do_restart ;;
+    update) do_update ;;
+    apply) do_apply ;;
+    backup) do_backup ;;
+    status) do_status ;;
+    autostart) do_autostart_fix ;;
+    help|--help|-h) help_menu ;;
+    "") main_menu ;;
+    *)
+        header
+        badge err "Unbekannter Befehl: $1"
+        echo
+        help_menu
+        exit 1
+        ;;
+esac

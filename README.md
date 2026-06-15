@@ -140,14 +140,6 @@ Install Fedora Spicetify Manager with:
 curl -fsSL https://raw.githubusercontent.com/equestrian98/fedora-spicetify-manager/main/install.sh | bash
 ```
 
-Replace `equestrian98` with your GitHub username.
-
-Example:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/equestrian98/fedora-spicetify-manager/main/install.sh | bash
-```
-
 After installation, open a new terminal or run:
 
 ```bash

@@ -1,0 +1,21 @@
+# Logs
+*.log
+/tmp/
+spice-command.log
+spice-autostart.log
+
+# Editor files
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local test files
+test/
+.local/
+.cache/

@@ -16,6 +16,8 @@ The tool provides an interactive terminal menu, direct commands, automatic path 
 
 ## Preview
 
+[url=https://ibb.co/39M2YGkc][img]https://i.ibb.co/dwLFJ17D/spice.gif[/img][/url]
+
 ```text
 ╭────────────────────────────────────────────────────╮
 │              Fedora Spicetify Manager              │

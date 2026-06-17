@@ -482,6 +482,98 @@ fedora-spicetify-manager/
 
 ---
 
+## Spotify Flatpak display/window title fix on Fedora
+
+Some Fedora users may notice display issues with the Spotify Flatpak version, especially on Wayland.
+
+Typical issues can be:
+
+- broken or weird window title behavior
+- broken title bar / header bar display
+- UI rendering glitches
+- strange window controls
+- Spotify looking different or buggy compared to X11
+
+This can happen because Spotify/Electron may not behave correctly on Wayland on some Fedora systems.
+
+A common workaround is to force the Spotify Flatpak app to use X11 instead of Wayland.
+
+### Apply the fix
+
+Run:
+
+```bash
+flatpak override --user \
+  --nosocket=wayland \
+  --socket=x11 \
+  --env=ELECTRON_OZONE_PLATFORM_HINT=x11 \
+  com.spotify.Client
+```
+
+Then close Spotify completely and start it again:
+
+```bash
+flatpak run com.spotify.Client
+```
+
+### Check if the fix is active
+
+You can check the current Flatpak override with:
+
+```bash
+flatpak override --user --show com.spotify.Client
+```
+
+If the fix is active, you should see something like:
+
+```ini
+[Context]
+sockets=!fallback-x11;!wayland;x11;
+
+[Environment]
+ELECTRON_OZONE_PLATFORM_HINT=x11
+```
+
+### Is this permanent?
+
+Yes.
+
+The command uses:
+
+```bash
+flatpak override --user
+```
+
+This writes the setting permanently to your user-specific Flatpak overrides.
+
+Spotify will continue to start with:
+
+```text
+!wayland
+x11
+ELECTRON_OZONE_PLATFORM_HINT=x11
+```
+
+even after a reboot.
+
+### Reset the fix
+
+If you want to remove this override later, run:
+
+```bash
+flatpak override --user --reset com.spotify.Client
+```
+
+Then Spotify will use the default Flatpak permissions again.
+
+### Notes
+
+This fix only affects Spotify for your current user account.
+
+It does not change system-wide Flatpak settings and does not affect other Flatpak apps.
+
+---
+
 ## Disclaimer
 
 This project is not affiliated with Spotify, Spicetify, Fedora, Red Hat, CentOS, Flatpak, GNOME or Spotify AB.

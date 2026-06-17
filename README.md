@@ -8,7 +8,7 @@
 
 ## Demo
 
-[![Fedora Spicetify Manager Demo](https://i.ibb.co/dwLFJ17D/spice.gif)](https://ibb.co/39M2YGkc)
+[![Fedora Spicetify Manager Demo](https://i.ibb.co/FL02qNnz/spice.gif)](https://ibb.co/39M2YGkc)
 
 **Fedora Spicetify Manager** is a small modern terminal helper for using **Spicetify** with **Spotify Flatpak** on Fedora, RHEL and CentOS based Linux systems.
 

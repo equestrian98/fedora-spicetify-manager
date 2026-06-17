@@ -6,6 +6,10 @@
 ![Spicetify](https://img.shields.io/badge/spicetify-supported-purple)
 ![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-orange)
 
+## Demo
+
+[![Fedora Spicetify Manager Demo](https://i.ibb.co/dwLFJ17D/spice.gif)](https://ibb.co/39M2YGkc)
+
 **Fedora Spicetify Manager** is a small modern terminal helper for using **Spicetify** with **Spotify Flatpak** on Fedora, RHEL and CentOS based Linux systems.
 
 It was created to make the common Spotify Flatpak + Spicetify setup easier, especially when Spicetify settings are lost after Spotify or Flatpak updates.
@@ -15,8 +19,6 @@ The tool provides an interactive terminal menu, direct commands, automatic path 
 ---
 
 ## Preview
-
-[url=https://ibb.co/39M2YGkc][img]https://i.ibb.co/dwLFJ17D/spice.gif[/img][/url]
 
 ```text
 ╭────────────────────────────────────────────────────╮
